@@ -35,7 +35,8 @@ def after_request(response):
 @login_required
 def index():
     """Show portfolio of stocks"""
-    return apology("TODO")
+    user_logged = db.execute("SELECT username FROM users WHERE id == ?", session["user_id"])[0]['username']
+    return render_template("portfolio.html", user=user_logged)
 
 
 @app.route("/buy", methods=["GET", "POST"])
@@ -112,7 +113,31 @@ def register():
     session.clear()
 
     if request.method == "POST":
-        print('do someting')
+        #sets payload enitities to local variables
+        username = request.form.get("username")
+        password = request.form.get("password")
+        confirmation = request.form.get("confirmation")
+
+        #checks if pass and user are provided
+        if not username:
+            return apology("must provide username", 403)
+        elif not password:
+            return apology("must provide password", 403)
+        
+        #checks if username taken
+        if db.execute("SELECT username FROM users WHERE username == ?", username):
+            return apology("username already in use, try another.")
+        
+        #checks if passwords match, then stores in database after hashing
+        if password != confirmation:
+            return apology("passwords do not match", 403)
+        else:
+            password_hash = generate_password_hash(password)
+            db.execute("INSERT INTO users (username, hash) VALUES (:username, :password)",
+                        username=f'{username}',
+                        password=f'{password_hash}')
+            return redirect("/")
+
     else:
         return render_template("register.html")
 

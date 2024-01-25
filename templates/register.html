@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    Log In
+    Register
 {% endblock %}
 
 {% block main %}
@@ -13,8 +13,22 @@
             <input class="form-control mx-auto w-auto" id="password" name="password" placeholder="Password" type="password">
         </div>
         <div class="mb-3">
-            <input class="form-control mx-auto w-auto" id="password" name="confirmation" placeholder="Repeat Password" type="password">
+            <input class="form-control mx-auto w-auto" id="confirmation" name="confirmation" placeholder="Repeat Password" type="password">
         </div>
         <button class="btn btn-primary" type="submit">register</button>
     </form>
+    <script>
+        console.log("hello");
+        document.querySelector("#password").disabled = true;
+        document.querySelector("#confirmation").disabled = true;
+        document.querySelector("#username").oninput = function() {
+            if (this.value.length >= 6) {
+                document.querySelector("#password").disabled = false;
+                document.querySelector("#confirmation").disabled = false;
+            } else {
+                document.querySelector("#password").disabled = true;
+                document.querySelector("#confirmation").disabled = true;
+            }
+        };
+    </script>
 {% endblock %}
