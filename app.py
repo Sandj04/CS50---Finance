@@ -35,15 +35,54 @@ def after_request(response):
 @login_required
 def index():
     """Show portfolio of stocks"""
-    user_logged = db.execute("SELECT username FROM users WHERE id == ?", session["user_id"])[0]['username']
-    return render_template("portfolio.html", user=user_logged)
+    user_info = db.execute("SELECT * FROM users WHERE id == ? LIMIT 1", session["user_id"]) #limit 1?
+    username = user_info[0]['username']
+    cash = user_info[0]['cash']
+    rows = db.execute("SELECT * FROM portfolio WHERE user_id == ?", session["user_id"])
+    total = cash
+    for row in rows:
+        total += row['price_total']
+        row['price_share'] = usd(row['price_share'])
+        row['price_total'] = usd(row['price_total'])
+    return render_template("index.html", user=f'{username}', rows=rows, cash=f'{usd(cash)}', total=f'{usd(total)}')
 
 
 @app.route("/buy", methods=["GET", "POST"])
 @login_required
 def buy():
     """Buy shares of stock"""
-    return apology("TODO")
+    if request.method == "POST":
+        symbol = request.form.get('symbol')
+        shares_raw = request.form.get('shares')
+        if shares_raw.isnumeric():
+            shares = int(shares_raw)
+        else:
+            return apology("Shares NaN")
+
+        output_lookup = lookup(symbol)
+        if not output_lookup or shares < 1:
+            return apology("Enter valid input")
+        else:
+            user_id = session["user_id"]
+            price_share = output_lookup['price']
+            price_total = price_share * shares
+            balance = db.execute("SELECT cash FROM users WHERE id == ?", user_id)[0]['cash']
+            balance_new = balance - price_total
+
+            if balance_new < 0:
+                return apology("Insufficient funds")
+            else:
+                db.execute("INSERT INTO portfolio (user_id, symbol, shares, price_share, price_total) VALUES (:user_id, :symbol, :shares, :price_share, :price_total)",
+                            user_id=user_id,
+                            symbol=f'{symbol}',
+                            shares=f'{shares}',
+                            price_share=price_share,
+                            price_total=price_total)
+                db.execute("UPDATE users SET cash = :cash WHERE id == :id", cash=balance_new, id=f'{user_id}')
+                flash("Submitted your child\'s college fund")
+                return render_template("buy.html")
+    else:
+        return render_template("buy.html")
 
 
 @app.route("/history")
@@ -104,7 +143,19 @@ def logout():
 @login_required
 def quote():
     """Get stock quote."""
-    return apology("TODO")
+    if request.method == "POST":
+        symbol = request.form.get('symbol')
+        output_lookup = lookup(symbol)
+
+        if output_lookup:
+            name = output_lookup['name']
+            price = usd(output_lookup['price'])
+            flash('Form submitted successfully!')
+            return render_template('quoted.html', name=name, symbol=symbol, price=price)
+        else:
+            return apology('Enter a valid symbol', 404)
+    else:
+        return render_template('quote.html')
 
 
 @app.route("/register", methods=["GET", "POST"])

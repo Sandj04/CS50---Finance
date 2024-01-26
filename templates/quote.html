@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Quote
+{% endblock %}
+
+{% block main %}
+    <form action="/quote" method="post">
+        <div class="mb-3">
+            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="symbol" name="symbol" placeholder="Symbol" type="text">
+        </div>
+        <button class="btn btn-primary mb-3" type="submit" id="quote" disabled>Quote</button>
+    </form>
+
+    <script>
+        document.querySelector("#symbol").oninput = function() {
+            if (this.value.length > 0) {
+                document.querySelector("#quote").disabled = false;
+            } else {
+                document.querySelector("#quote").disabled = true;
+            }
+        };
+    </script>
+{% endblock %}

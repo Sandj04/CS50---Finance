@@ -10,17 +10,15 @@
             <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="username" name="username" placeholder="Username" type="text">
         </div>
         <div class="mb-3">
-            <input class="form-control mx-auto w-auto" id="password" name="password" placeholder="Password" type="password">
+            <input class="form-control mx-auto w-auto" id="password" name="password" placeholder="Password" type="password" disabled>
         </div>
         <div class="mb-3">
-            <input class="form-control mx-auto w-auto" id="confirmation" name="confirmation" placeholder="Repeat Password" type="password">
+            <input class="form-control mx-auto w-auto" id="confirmation" name="confirmation" placeholder="Repeat Password" type="password" disabled>
         </div>
-        <button class="btn btn-primary" type="submit">register</button>
+        <button class="btn btn-primary mb-3" type="submit">Register</button>
+        <p>Got an account? <a href="/login">Log in here!</a></p>
     </form>
     <script>
-        console.log("hello");
-        document.querySelector("#password").disabled = true;
-        document.querySelector("#confirmation").disabled = true;
         document.querySelector("#username").oninput = function() {
             if (this.value.length >= 6) {
                 document.querySelector("#password").disabled = false;
