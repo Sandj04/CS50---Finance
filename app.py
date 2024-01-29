@@ -31,23 +31,25 @@ def after_request(response):
     return response
 
 
-@app.route("/")
+@app.route("/") #TODO ADD COMMENTS, CHECK IF CURRENT PRICE IS ACCURATE? IDK SEEMS OFF
 @login_required
 def index():
     """Show portfolio of stocks"""
-    user_info = db.execute("SELECT * FROM users WHERE id == ? LIMIT 1", session["user_id"]) #limit 1?
+    user_info = db.execute("SELECT * FROM users WHERE id == ?", session["user_id"])
     username = user_info[0]['username']
     cash = user_info[0]['cash']
     rows = db.execute("SELECT * FROM portfolio WHERE user_id == ?", session["user_id"])
     total = cash
     for row in rows:
-        total += row['price_total']
-        row['price_share'] = usd(row['price_share'])
-        row['price_total'] = usd(row['price_total'])
-    return render_template("index.html", user=f'{username}', rows=rows, cash=f'{usd(cash)}', total=f'{usd(total)}')
+        stock = lookup(row['symbol'])
+        current_price = stock['price']
+        row['price_share'] = usd(current_price)
+        row['price_total'] = usd(current_price * row['shares'])
+        total += current_price * row['shares']
+    return render_template("index.html", user=username, rows=rows, cash=usd(cash), total=usd(total))
 
 
-@app.route("/buy", methods=["GET", "POST"])
+@app.route("/buy", methods=["GET", "POST"]) #TODO ADD COMMENTS, FIX MULTIPLE OF SAME STOCK IF SOLD TO 0
 @login_required
 def buy():
     """Buy shares of stock"""
@@ -193,8 +195,36 @@ def register():
         return render_template("register.html")
 
 
-@app.route("/sell", methods=["GET", "POST"])
+@app.route("/sell", methods=["GET", "POST"]) #TODO ADD COMMENTS, FIX STOCK NUMBER SET AT 0 IN INDEX
 @login_required
 def sell():
     """Sell shares of stock"""
-    return apology("TODO")
+    if request.method == "POST":
+        symbol = request.form.get("symbol").upper()
+        shares = int(request.form.get("shares"))
+        stock = lookup(symbol)
+
+        if stock is None:
+            return apology("Invalid symbol")
+
+        rows = db.execute("SELECT shares FROM portfolio WHERE user_id = :user_id AND symbol = :symbol",
+                            user_id=session["user_id"],
+                            symbol=symbol)
+
+        if len(rows) != 1 or rows[0]["shares"] < shares:
+            return apology("Not enough shares")
+
+        db.execute("UPDATE users SET cash = cash + :value WHERE id = :id",
+                    value=stock['price'] * shares,
+                    id=session["user_id"])
+
+        db.execute("UPDATE portfolio SET shares = shares - :shares WHERE user_id = :user_id AND symbol = :symbol",
+                    shares=shares,
+                    user_id=session["user_id"],
+                    symbol=symbol)
+        flash("Successfully sold, yippie")
+        return redirect("/") #TODO MAYBE 'sell another' LIKE IN BUY
+    else:
+        rows = db.execute("SELECT symbol FROM portfolio WHERE user_id = :user_id",
+                            user_id=session["user_id"])
+        return render_template("sell.html", symbols=[row["symbol"] for row in rows])

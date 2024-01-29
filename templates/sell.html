@@ -1,26 +1,26 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    Buy
+    Sell
 {% endblock %}
 
 {% block main %}
-    <form action="/buy" method="post">
+    <form action="/sell" method="post">
         <div class="mb-3">
             <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="symbol" name="symbol" placeholder="Symbol" type="text">
         </div>
         <div class="mb-3">
             <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="shares" name="shares" placeholder="Shares" type="text">
         </div>
-        <button class="btn btn-primary mb-3" type="submit" id="buy" disabled>Buy</button>
+        <button class="btn btn-primary mb-3" type="submit" id="sell" disabled>Sell</button>
     </form>
 
     <script>
         document.querySelector("#symbol").oninput = function() {
             if (this.value.length > 0) {
-                document.querySelector("#buy").disabled = false;
+                document.querySelector("#sell").disabled = false;
             } else {
-                document.querySelector("#buy").disabled = true;
+                document.querySelector("#sell").disabled = true;
             }
         };
     </script>
