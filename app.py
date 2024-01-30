@@ -163,7 +163,7 @@ def quote():
             flash('Form submitted successfully!')
             return render_template('quoted.html', name=name, symbol=symbol, price=price)
         else:
-            return apology('Enter a valid symbol', 404)
+            return apology('Enter a valid symbol', 400)
     else:
         return render_template('quote.html')
 
@@ -181,9 +181,9 @@ def register():
 
         #checks if pass and user are provided
         if not username:
-            return apology("must provide username", 403)
+            return apology("must provide username", 400)
         elif not password:
-            return apology("must provide password", 403)
+            return apology("must provide password", 400)
         
         #checks if username taken
         if db.execute("SELECT username FROM users WHERE username == ?", username):
@@ -191,7 +191,7 @@ def register():
         
         #checks if passwords match, then stores in database after hashing
         if password != confirmation:
-            return apology("passwords do not match", 403)
+            return apology("passwords do not match", 400)
         else:
             password_hash = generate_password_hash(password)
             db.execute("INSERT INTO users (username, hash) VALUES (:username, :password)",
@@ -209,8 +209,12 @@ def sell():
     """Sell shares of stock"""
     if request.method == "POST":
         symbol = request.form.get("symbol").upper()
-        shares = int(request.form.get("shares"))
+        shares_raw = request.form.get("shares")
         stock = lookup(symbol)
+        if shares_raw.isnumeric():
+            shares = int(shares_raw)
+        else:
+            return apology("Shares NaN")
 
         if stock is None or shares < 1:
             return apology("Invalid input")
