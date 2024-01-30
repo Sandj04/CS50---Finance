@@ -31,7 +31,7 @@ def after_request(response):
     return response
 
 
-@app.route("/") #TODO ADD COMMENTS, CHECK IF CURRENT PRICE IS ACCURATE? IDK SEEMS OFF
+@app.route("/") #TODO ADD COMMENTS
 @login_required
 def index():
     """Show portfolio of stocks"""
@@ -41,7 +41,7 @@ def index():
     rows = db.execute("SELECT * FROM portfolio WHERE user_id == ?", session["user_id"])
     total = cash
     for row in rows:
-        stock = lookup(row['symbol'])
+        stock = lookup(row['symbol']) #VERY SLOW LOADING, MAYBE LOADING SCREEN
         current_price = stock['price']
         row['price_share'] = usd(current_price)
         row['price_total'] = usd(current_price * row['shares'])
@@ -54,7 +54,7 @@ def index():
 def buy():
     """Buy shares of stock"""
     if request.method == "POST":
-        symbol = request.form.get('symbol')
+        symbol = request.form.get('symbol').upper()
         shares_raw = request.form.get('shares')
         if shares_raw.isnumeric():
             shares = int(shares_raw)
@@ -74,12 +74,20 @@ def buy():
             if balance_new < 0:
                 return apology("Insufficient funds")
             else:
-                db.execute("INSERT INTO portfolio (user_id, symbol, shares, price_share, price_total) VALUES (:user_id, :symbol, :shares, :price_share, :price_total)",
+                check = db.execute("SELECT symbol, shares FROM portfolio WHERE user_id == ? AND symbol == ?", user_id, symbol)
+                if len(check) > 0:
+                    db.execute("UPDATE portfolio SET shares = shares + :value WHERE user_id == :user_id AND symbol == :symbol",
+                            user_id=user_id,
+                            value=shares,
+                            symbol=f'{symbol}')
+                else:
+                    db.execute("INSERT INTO portfolio (user_id, symbol, shares, price_share, price_total) VALUES (:user_id, :symbol, :shares, :price_share, :price_total)",
                             user_id=user_id,
                             symbol=f'{symbol}',
                             shares=f'{shares}',
                             price_share=price_share,
                             price_total=price_total)
+                
                 db.execute("UPDATE users SET cash = :cash WHERE id == :id", cash=balance_new, id=f'{user_id}')
                 flash("Submitted your child\'s college fund")
                 return render_template("buy.html")
@@ -113,7 +121,7 @@ def login():
             return apology("must provide password", 403)
 
         # Query database for username
-        rows = db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username"))
+        rows = db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username").lower())
 
         # Ensure username exists and password is correct
         if len(rows) != 1 or not check_password_hash(rows[0]["hash"], request.form.get("password")):
@@ -146,7 +154,7 @@ def logout():
 def quote():
     """Get stock quote."""
     if request.method == "POST":
-        symbol = request.form.get('symbol')
+        symbol = request.form.get('symbol').upper()
         output_lookup = lookup(symbol)
 
         if output_lookup:
@@ -167,7 +175,7 @@ def register():
 
     if request.method == "POST":
         #sets payload enitities to local variables
-        username = request.form.get("username")
+        username = request.form.get("username").lower()
         password = request.form.get("password")
         confirmation = request.form.get("confirmation")
 
@@ -204,8 +212,8 @@ def sell():
         shares = int(request.form.get("shares"))
         stock = lookup(symbol)
 
-        if stock is None:
-            return apology("Invalid symbol")
+        if stock is None or shares < 1:
+            return apology("Invalid input")
 
         rows = db.execute("SELECT shares FROM portfolio WHERE user_id = :user_id AND symbol = :symbol",
                             user_id=session["user_id"],
@@ -218,12 +226,19 @@ def sell():
                     value=stock['price'] * shares,
                     id=session["user_id"])
 
-        db.execute("UPDATE portfolio SET shares = shares - :shares WHERE user_id = :user_id AND symbol = :symbol",
-                    shares=shares,
-                    user_id=session["user_id"],
-                    symbol=symbol)
+        remaining_shares = rows[0]["shares"] - shares
+        if remaining_shares == 0:
+            db.execute("DELETE FROM portfolio WHERE user_id = :user_id AND symbol = :symbol",
+                        user_id=session["user_id"],
+                        symbol=symbol)
+        else:
+            db.execute("UPDATE portfolio SET shares = :shares WHERE user_id = :user_id AND symbol = :symbol",
+                        shares=remaining_shares,
+                        user_id=session["user_id"],
+                        symbol=symbol)
+
         flash("Successfully sold, yippie")
-        return redirect("/") #TODO MAYBE 'sell another' LIKE IN BUY
+        return render_template("sell.html")
     else:
         rows = db.execute("SELECT symbol FROM portfolio WHERE user_id = :user_id",
                             user_id=session["user_id"])
