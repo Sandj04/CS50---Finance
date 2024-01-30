@@ -13,15 +13,17 @@
                 <th class="text-end">Shares</th>
                 <th class="text-end">Price</th>
                 <th class="text-end">TOTAL</th>
+                <th class="text-end"></th>
             </tr>
         </thead>
     <tbody>
-                {% for row in rows %}
+                {% for row in portfolio %}
                 <tr>           
                     <td class="text-start">{{ row['symbol'] }}</td>
-                    <td class="text-end">{{ row['shares'] }}</td>
-                    <td class="text-end">{{ row['price_share'] }}</td>
-                    <td class="text-end">{{ row['price_total'] }}</td>
+                    <td class="text-end">{{ row['SUM(shares)'] }}</td>
+                    <td class="text-end">{{ row['current_price'] | usd}}</td>
+                    <td class="text-end">{{ row['total_price'] | usd }}</td>
+                    <td class="text-end"><a href="/sell?symbol={{ row['symbol'] }}">Sell</a>&#47;<a href="/buy?symbol={{ row['symbol'] }}">Buy</a></td>
                 </tr>
                 {% endfor %}
             
@@ -29,11 +31,11 @@
         <tfoot>
             <tr>
                 <td class="border-0 fw-bold text-end" colspan="3">Cash</td>
-                <td class="border-0 text-end">{{ cash }}</td>
+                <td class="border-0 text-end">{{ user_cash | usd }}</td>
             </tr>
             <tr>
                 <td class="border-0 fw-bold text-end" colspan="3">TOTAL</td>
-                <td class="border-0 w-bold text-end">{{ total }}</td>
+                <td class="border-0 w-bold text-end">{{ current_total | usd }}</td>
             </tr>
         </tfoot>
     </table>

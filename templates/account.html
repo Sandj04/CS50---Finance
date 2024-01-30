@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Account
+{% endblock %}
+
+{% block main %}
+    <h1>Account</h1>
+    <div>
+        <p>Username: {{ username }}</p>
+        <p>Balance: {{ cash | usd }}</p>
+        <button class="btn btn-primary" onclick="location.href='/change_password'">Change Password</button>
+        <button class="btn btn-primary" onclick="location.href='/change_username'">Change Username</button>
+        <button class="btn btn-primary" onclick="location.href='/deposit'">Deposit</button>
+    </div>
+{% endblock %}

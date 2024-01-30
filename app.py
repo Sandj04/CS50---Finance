@@ -21,6 +21,11 @@ Session(app)
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///finance.db")
 
+def check_shares_input(raw) -> int:
+    if raw.isnumeric():
+        return int(raw)
+    else:
+        return 0 #to trip the check
 
 @app.after_request
 def after_request(response):
@@ -30,24 +35,38 @@ def after_request(response):
     response.headers["Pragma"] = "no-cache"
     return response
 
+@app.context_processor
+def header():
+    user_info = db.execute("SELECT * FROM users WHERE id = ?", session["user_id"])
+    username = user_info[0]["username"]
+    cash = user_info[0]["cash"]
+    return dict(username=username, cash=cash)
+
 
 @app.route("/") #TODO ADD COMMENTS
 @login_required
 def index():
     """Show portfolio of stocks"""
-    user_info = db.execute("SELECT * FROM users WHERE id == ?", session["user_id"])
+    user_id = session["user_id"]
+    portfolio = db.execute("SELECT symbol, name, SUM(shares) FROM trades WHERE user_id = :user_id GROUP BY symbol HAVING SUM(shares) > 0 ORDER BY price DESC",
+                            user_id=user_id)
+    user_info = db.execute("SELECT * FROM users WHERE id = ?", user_id)
     username = user_info[0]['username']
     cash = user_info[0]['cash']
-    rows = db.execute("SELECT * FROM portfolio WHERE user_id == ?", session["user_id"])
-    total = cash
-    for row in rows:
-        stock = lookup(row['symbol']) #VERY SLOW LOADING, MAYBE LOADING SCREEN
-        current_price = stock['price']
-        row['price_share'] = usd(current_price)
-        row['price_total'] = usd(current_price * row['shares'])
-        total += current_price * row['shares']
-    return render_template("index.html", user=username, rows=rows, cash=usd(cash), total=usd(total))
+    current_total = cash
+    for stock in portfolio:
+        stock_current = lookup(stock["symbol"])
+        stock["current_price"] = stock_current["price"]
+        stock["total_price"] = stock_current["price"] * stock["SUM(shares)"]
+        current_total += stock["total_price"]
+    print(portfolio)
+    return render_template("index.html", user=username, portfolio=portfolio, user_cash=cash, current_total=current_total)
 
+
+@app.route("/account")
+@login_required
+def account():
+    return render_template("account.html")
 
 @app.route("/buy", methods=["GET", "POST"]) #TODO ADD COMMENTS, FIX MULTIPLE OF SAME STOCK IF SOLD TO 0
 @login_required
@@ -74,20 +93,13 @@ def buy():
             if balance_new < 0:
                 return apology("Insufficient funds")
             else:
-                check = db.execute("SELECT symbol, shares FROM portfolio WHERE user_id == ? AND symbol == ?", user_id, symbol)
-                if len(check) > 0:
-                    db.execute("UPDATE portfolio SET shares = shares + :value WHERE user_id == :user_id AND symbol == :symbol",
-                            user_id=user_id,
-                            value=shares,
-                            symbol=f'{symbol}')
-                else:
-                    db.execute("INSERT INTO portfolio (user_id, symbol, shares, price_share, price_total) VALUES (:user_id, :symbol, :shares, :price_share, :price_total)",
+                db.execute("INSERT INTO trades (user_id, symbol, name, shares, price) VALUES (:user_id, :symbol, :name, :shares, :price)",
                             user_id=user_id,
                             symbol=f'{symbol}',
+                            name=f'{symbol}', #until solution found
                             shares=f'{shares}',
-                            price_share=price_share,
-                            price_total=price_total)
-                
+                            price=price_share)
+
                 db.execute("UPDATE users SET cash = :cash WHERE id == :id", cash=balance_new, id=f'{user_id}')
                 flash("Submitted your child\'s college fund")
                 return render_template("buy.html")
@@ -99,7 +111,10 @@ def buy():
 @login_required
 def history():
     """Show history of transactions"""
-    return apology("TODO")
+    user_transactions = db.execute("SELECT user_id, symbol, shares, price, time FROM trades WHERE user_id = ? ORDER BY time", session["user_id"])
+    print(user_transactions)
+
+    return render_template("history.html", user_transactions=user_transactions)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -207,43 +222,43 @@ def register():
 @login_required
 def sell():
     """Sell shares of stock"""
+    user_id = session["user_id"]
     if request.method == "POST":
+        #setting local veriables
         symbol = request.form.get("symbol").upper()
         shares_raw = request.form.get("shares")
         stock = lookup(symbol)
-        if shares_raw.isnumeric():
-            shares = int(shares_raw)
-        else:
-            return apology("Shares NaN")
+        shares = check_shares_input(shares_raw) #check if fail
 
         if stock is None or shares < 1:
-            return apology("Invalid input")
-
-        rows = db.execute("SELECT shares FROM portfolio WHERE user_id = :user_id AND symbol = :symbol",
-                            user_id=session["user_id"],
+            return apology("Invalid input, try again.")
+        
+        rows = db.execute("SELECT symbol, name, shares, price FROM trades WHERE user_id == :user_id AND symbol = :symbol",
+                            user_id=user_id,
                             symbol=symbol)
-
-        if len(rows) != 1 or rows[0]["shares"] < shares:
+        
+        current_shares = 0
+        for row in rows:
+            current_shares += int(row["shares"])
+        
+        if current_shares < shares:
             return apology("Not enough shares")
-
+        
         db.execute("UPDATE users SET cash = cash + :value WHERE id = :id",
-                    value=stock['price'] * shares,
-                    id=session["user_id"])
-
-        remaining_shares = rows[0]["shares"] - shares
-        if remaining_shares == 0:
-            db.execute("DELETE FROM portfolio WHERE user_id = :user_id AND symbol = :symbol",
-                        user_id=session["user_id"],
-                        symbol=symbol)
-        else:
-            db.execute("UPDATE portfolio SET shares = :shares WHERE user_id = :user_id AND symbol = :symbol",
-                        shares=remaining_shares,
-                        user_id=session["user_id"],
-                        symbol=symbol)
-
-        flash("Successfully sold, yippie")
+                    value=stock["price"] * shares,
+                    id=user_id)
+        
+        db.execute("INSERT INTO trades (user_id, symbol, name, shares, price) VALUES (:user_id, :symbol, :name, :shares, :price)",
+                            user_id=user_id,
+                            symbol=f'{symbol}',
+                            name=f'{symbol}', #until solution found
+                            shares=f'{shares * (-1)}',
+                            price=stock["price"])
+        
+        flash("Success! Yippie!")
         return render_template("sell.html")
     else:
-        rows = db.execute("SELECT symbol FROM portfolio WHERE user_id = :user_id",
-                            user_id=session["user_id"])
+        rows = db.execute("SELECT symbol FROM trades WHERE user_id = :user_id",
+                            user_id=user_id)
         return render_template("sell.html", symbols=[row["symbol"] for row in rows])
+
