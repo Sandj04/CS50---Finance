@@ -16,6 +16,16 @@
     </form>
 
     <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const getSymbol = urlParams.get('symbol');
+        if (getSymbol) {
+            document.querySelector("#symbol").value = getSymbol;
+            document.querySelector("#shares").focus();
+            document.querySelector("#sell").disabled = false;
+        }
+
+
+
         document.querySelector("#symbol").oninput = function() {
             if (this.value.length > 0) {
                 document.querySelector("#sell").disabled = false;

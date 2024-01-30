@@ -14,6 +14,7 @@
                 <th class="text-end">Price</th>
                 <th class="text-end">TOTAL</th>
                 <th class="text-end"></th>
+                <th class="text-end"></th>
             </tr>
         </thead>
     <tbody>
@@ -23,6 +24,7 @@
                     <td class="text-end">{{ row['SUM(shares)'] }}</td>
                     <td class="text-end">{{ row['current_price'] | usd}}</td>
                     <td class="text-end">{{ row['total_price'] | usd }}</td>
+                    <td class="text-end">{{ row['profitability'] }}</td>
                     <td class="text-end"><a href="/sell?symbol={{ row['symbol'] }}">Sell</a>&#47;<a href="/buy?symbol={{ row['symbol'] }}">Buy</a></td>
                 </tr>
                 {% endfor %}

@@ -48,7 +48,7 @@ def header():
 def index():
     """Show portfolio of stocks"""
     user_id = session["user_id"]
-    portfolio = db.execute("SELECT symbol, name, SUM(shares) FROM trades WHERE user_id = :user_id GROUP BY symbol HAVING SUM(shares) > 0 ORDER BY price DESC",
+    portfolio = db.execute("SELECT symbol, name, SUM(shares), price FROM trades WHERE user_id = :user_id GROUP BY symbol HAVING SUM(shares) > 0 ORDER BY price DESC",
                             user_id=user_id)
     user_info = db.execute("SELECT * FROM users WHERE id = ?", user_id)
     username = user_info[0]['username']
@@ -58,6 +58,7 @@ def index():
         stock_current = lookup(stock["symbol"])
         stock["current_price"] = stock_current["price"]
         stock["total_price"] = stock_current["price"] * stock["SUM(shares)"]
+        stock["profitability"] = stock_current["price"] / stock["price"]
         current_total += stock["total_price"]
     print(portfolio)
     return render_template("index.html", user=username, portfolio=portfolio, user_cash=cash, current_total=current_total)
@@ -175,7 +176,6 @@ def quote():
         if output_lookup:
             name = output_lookup['name']
             price = usd(output_lookup['price'])
-            flash('Form submitted successfully!')
             return render_template('quoted.html', name=name, symbol=symbol, price=price)
         else:
             return apology('Enter a valid symbol', 400)
