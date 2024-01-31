@@ -8,6 +8,7 @@ import uuid
 
 from flask import redirect, render_template, session
 from functools import wraps
+import http.client, urllib.parse
 
 
 def apology(message, code=400):
@@ -76,3 +77,40 @@ def lookup(symbol):
 def usd(value):
     """Format value as USD."""
     return f"${value:,.2f}"
+
+def time():
+    """Get current time one day ago."""
+    current_time = datetime.datetime.now(pytz.timezone("US/Eastern"))
+    one_day_ago = current_time - datetime.timedelta(days=1)
+    formatted_time = one_day_ago.strftime("%Y-%m-%dT%H:%M")
+    return formatted_time
+
+def news(symbols: list, filter: bool, industry, published_after=time()): #Not enough time to implement this function
+    """Look up news for country and sector."""
+    # Prepare API request
+    industry = industry.lower()
+    symbols = ','.join([s.upper().replace(' ', '') for s in symbols])
+    filter = str(filter).lower()
+
+    API_TOKEN = "yrPDwJxKwD0wPma7nXyzBjCxqRXM39LBFv78qvRl" #for testing purposes only
+
+    conn = http.client.HTTPSConnection('api.marketaux.com')
+
+    params = urllib.parse.urlencode({
+        'api_token': API_TOKEN,
+        'symbols': symbols,
+        'limit': 10,
+        'filter_entities': filter,
+        'industry': industry,
+        })
+
+    conn.request('GET', '/v1/news/all?{}'.format(params))
+
+    res = conn.getresponse()
+    data = res.read()
+
+    print(data.decode('utf-8'))
+
+
+
+

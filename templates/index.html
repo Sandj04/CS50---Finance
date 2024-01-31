@@ -5,8 +5,10 @@
 {% endblock %}
 
 {% block main %}
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script type="text/javascript" charset="utf-8" src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.js"></script>
     <h1 class="mb-4">Welcome, {{ user }}.</h1>
-    <table class="table table-striped">
+    <table class="table table-striped" id="portfolio">
         <thead>
             <tr>
                 <th class="text-start">Symbol</th>
@@ -44,12 +46,22 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.profitability').forEach(profitability => {
-                    if (profitability.innerHTML.includes('-')) {
-                        profitability.style.backgroundColor = 'red';
-                    } else {
-                        profitability.style.backgroundColor = '#00cc00';
-                    }
+                if (profitability.innerHTML.includes('-')) {
+                    profitability.style.backgroundColor = 'red';
+                } else {
+                    profitability.style.backgroundColor = '#00cc00';
+                }
+            });
+            
+            document.querySelectorAll('input[type="text"]').forEach(input => {
+                input.classList.add('form-control', 'mx-auto', 'w-auto');
+            });
+    
+            $(document).ready(function () {
+                $('#portfolio').DataTable({
                 });
+            });
         });
     </script>
+    
 {% endblock %}

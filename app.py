@@ -83,15 +83,10 @@ def index():
         return apology("Something went wrong", 500)
 
 
-@app.route("/settings")
+@app.route("/account")
 @login_required
-def settings():
-    return render_template("settings.html")
-
-@app.route("/dashboard")
-@login_required
-def dashboard():
-    return render_template("dashboard.html")
+def account():
+    return render_template("account.html")
 
 @app.route("/buy", methods=["GET", "POST"]) #TODO ADD COMMENTS, FIX MULTIPLE OF SAME STOCK IF SOLD TO 0
 @login_required
@@ -111,7 +106,7 @@ def buy():
         else:
             user_id = session["user_id"]
             price_share = output_lookup['price']
-            price_total = price_share * shares
+            price_total = round(price_share * shares, 2)
             balance = db.execute("SELECT cash FROM users WHERE id == ?", user_id)[0]['cash']
             balance_new = balance - price_total
 
@@ -126,8 +121,8 @@ def buy():
                             price=price_share)
 
                 db.execute("UPDATE users SET cash = :cash WHERE id == :id", cash=balance_new, id=f'{user_id}')
-                flash(f"Successfully bought {shares} share's of {symbol}!")
-                return render_template("buy.html")
+                flash(f"Successfully bought {shares} share's of {symbol} at {price_total:,.2f}!")
+                return redirect("/")
     else:
         return render_template("buy.html")
 
@@ -279,7 +274,7 @@ def sell():
                             price=stock["price"])
         
         flash("Success! Yippie!")
-        return render_template("sell.html")
+        return redirect("/")
     else:
         rows = db.execute("SELECT symbol FROM trades WHERE user_id = :user_id",
                             user_id=user_id)
