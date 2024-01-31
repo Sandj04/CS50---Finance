@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Delete account
+{% endblock %}
+
+{% block main %}
+    <h1>{{ user }}: Account Termination</h1>
+    <p>Are you sure you want to delete your account?</p>
+    <p>This action cannot be undone.</p>
+    <form action="/delete" method="post">
+        <div class="form-group">
+            <button class="btn btn-primary" type="submit">Delete Account</button>
+        </div>
+    </form>
+{% endblock %}

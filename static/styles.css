@@ -25,3 +25,24 @@ nav .navbar-brand .green
 .table>:not(:first-child){
     border-top: 0px !important;
 }
+
+.profitability{
+    color: white;
+    border: 1px solid transparent;
+    padding: 0.375rem;
+    font-size: 1rem;
+    border-radius: 0.25rem;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    cursor: default !important;
+    font-weight: 400;
+    line-height: 1.5;
+    width: 61px;
+    -webkit-text-stroke-width: 0.1px;
+    -webkit-text-stroke-color: rgb(245, 245, 245);
+}
+
+.w-30 {
+    width: 30%!important;
+}

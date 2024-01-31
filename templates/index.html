@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block main %}
-    <h1>Logged in as {{ user }}</h1>
+    <h1 class="mb-4">Welcome, {{ user }}.</h1>
     <table class="table table-striped">
         <thead>
             <tr>
@@ -20,12 +20,12 @@
     <tbody>
                 {% for row in portfolio %}
                 <tr>           
-                    <td class="text-start">{{ row['symbol'] }}</td>
-                    <td class="text-end">{{ row['SUM(shares)'] }}</td>
-                    <td class="text-end">{{ row['current_price'] | usd}}</td>
-                    <td class="text-end">{{ row['total_price'] | usd }}</td>
-                    <td class="text-end">{{ row['profitability'] }}</td>
-                    <td class="text-end"><a href="/sell?symbol={{ row['symbol'] }}">Sell</a>&#47;<a href="/buy?symbol={{ row['symbol'] }}">Buy</a></td>
+                    <td class="text-start align-middle col-3">{{ row['symbol'] }}</td>
+                    <td class="text-end align-middle col-2">{{ row['SUM(shares)'] }}</td>
+                    <td class="text-end align-middle col-2">{{ row['current_price'] | usd}}</td>
+                    <td class="text-end align-middle col-2">{{ row['total_price'] | usd }}</td>
+                    <td class="text-end align-middle col-1"><button class="profitability">{{ row['profitability'] }}</button></td>
+                    <td class="align-middle col-1"><a href="/sell?symbol={{ row['symbol'] }}">Sell</a>&#47;<a href="/buy?symbol={{ row['symbol'] }}">Buy</a></td>
                 </tr>
                 {% endfor %}
             
@@ -41,4 +41,15 @@
             </tr>
         </tfoot>
     </table>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.profitability').forEach(profitability => {
+                    if (profitability.innerHTML.includes('-')) {
+                        profitability.style.backgroundColor = 'red';
+                    } else {
+                        profitability.style.backgroundColor = '#00cc00';
+                    }
+                });
+        });
+    </script>
 {% endblock %}

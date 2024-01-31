@@ -1,3 +1,17 @@
+"""
+finance.py
+
+Inleiding dataverwerking en webtechnieken - Final Project
+
+This program is a web application that allows users to manage portfolios of stocks.
+The application lets users "buy" and "sell" stocks by querying Yahoo for stocks' prices.
+
+Personal touch: added a delete account function, a deposit function, a withdraw function,
+a change password function and a change username function.
+
+Sander Murray - 14861291
+"""
+
 import os
 
 from cs50 import SQL
@@ -37,31 +51,37 @@ def after_request(response):
 
 @app.context_processor
 def header():
-    user_info = db.execute("SELECT * FROM users WHERE id = ?", session["user_id"])
-    username = user_info[0]["username"]
-    cash = user_info[0]["cash"]
-    return dict(username=username, cash=cash)
+    if 'user_id' in session:
+        user_info = db.execute("SELECT * FROM users WHERE id = ?", session["user_id"])
+        if user_info:
+            username = user_info[0]["username"]
+            cash = user_info[0]["cash"]
+            return dict(user=username, cash=cash)
+    return {}
 
 
 @app.route("/") #TODO ADD COMMENTS
 @login_required
 def index():
     """Show portfolio of stocks"""
-    user_id = session["user_id"]
-    portfolio = db.execute("SELECT symbol, name, SUM(shares), price FROM trades WHERE user_id = :user_id GROUP BY symbol HAVING SUM(shares) > 0 ORDER BY price DESC",
-                            user_id=user_id)
-    user_info = db.execute("SELECT * FROM users WHERE id = ?", user_id)
-    username = user_info[0]['username']
-    cash = user_info[0]['cash']
-    current_total = cash
-    for stock in portfolio:
-        stock_current = lookup(stock["symbol"])
-        stock["current_price"] = stock_current["price"]
-        stock["total_price"] = stock_current["price"] * stock["SUM(shares)"]
-        stock["profitability"] = stock_current["price"] / stock["price"]
-        current_total += stock["total_price"]
-    print(portfolio)
-    return render_template("index.html", user=username, portfolio=portfolio, user_cash=cash, current_total=current_total)
+    if 'user_id' in session:
+        user_id = session["user_id"]
+        portfolio = db.execute("SELECT symbol, name, SUM(shares), price FROM trades WHERE user_id = :user_id GROUP BY symbol HAVING SUM(shares) > 0 ORDER BY price DESC",
+                                user_id=user_id)
+        user_info = db.execute("SELECT * FROM users WHERE id = ?", user_id)
+        cash = user_info[0]['cash']
+        current_total = cash
+        for stock in portfolio:
+            stock_current = lookup(stock["symbol"])
+            stock["current_price"] = stock_current["price"]
+            stock["total_price"] = stock_current["price"] * stock["SUM(shares)"]
+            profitability = round(((stock_current["price"] / stock["price"]) * 100) - 100, 2)
+            stock["profitability"] = f"+{profitability}" if profitability > 0 else str(profitability)
+            current_total += stock["total_price"]
+        print(portfolio)
+        return render_template("index.html", portfolio=portfolio, user_cash=cash, current_total=current_total)
+    else:
+        return apology("Something went wrong", 500)
 
 
 @app.route("/account")
@@ -261,4 +281,91 @@ def sell():
         rows = db.execute("SELECT symbol FROM trades WHERE user_id = :user_id",
                             user_id=user_id)
         return render_template("sell.html", symbols=[row["symbol"] for row in rows])
+    
+@app.route("/delete", methods=["GET", "POST"])
+@login_required
+def delete():
+    user_id = session["user_id"]
+    if request.method == "POST":
+        db.execute("DELETE FROM trades WHERE user_id == :user_id",
+            user_id=user_id)
+        db.execute("DELETE FROM users WHERE id == :id",
+                    id=user_id)
+        session.clear()
+        return redirect("/")
+    else:
+        return render_template("delete.html")
+    
+@app.route("/deposit", methods=["GET", "POST"])
+@login_required
+def deposit():
+    user_id = session["user_id"]
+    deposit = request.form.get("deposit")
+    print(deposit)
+    if deposit.isnumeric():
+        deposit = int(deposit)
+    else:
+        return apology("NaN")
+    db.execute("UPDATE users SET cash = cash + :deposit WHERE id == :id",
+                deposit=deposit,
+                id=user_id)
+    flash("Success! Stop draining your retirement fund!")
+    return redirect("/")
 
+@app.route("/withdraw", methods=["POST"])
+@login_required
+def withdraw():
+    user_id = session["user_id"]
+    withdraw = request.form.get("withdraw")
+    if withdraw.isnumeric():
+        withdraw = int(withdraw)
+    else:
+        return apology("NaN")
+    balance = db.execute("SELECT cash FROM users WHERE id == ?", user_id)[0]['cash']
+    if balance < withdraw:
+        return apology("Insufficient funds")
+    else:
+        db.execute("UPDATE users SET cash = cash - :withdraw WHERE id == :id",
+                    withdraw=withdraw,
+                    id=user_id)
+        flash("Success! See you in Monaco!")
+        return redirect("/")
+
+@app.route("/change_pass", methods=["POST"])
+@login_required
+def change_pass():
+    user_id = session["user_id"]
+    password = request.form.get("new_password")
+
+    if not password:
+        return apology("Enter a password")
+
+    password_hash = generate_password_hash(password)
+    current_hash = db.execute("SELECT hash FROM users WHERE id == :id",
+                                id=user_id)[0]["hash"]
+    if check_password_hash(current_hash, password):
+        return apology("New password cannot be the same as the old one")
+    else:
+        db.execute("UPDATE users SET hash = :password WHERE id == :id",
+                    password=password_hash,
+                    id=user_id)
+        flash("Success! Password changed!")
+        return redirect("/")
+    
+@app.route("/change_user", methods=["POST"])
+@login_required
+def change_user():
+    user_id = session["user_id"]
+    username = request.form.get("new_username").lower()
+
+    if not username:
+        return apology("Enter a username")
+
+    if db.execute("SELECT username FROM users WHERE username == ?", username):
+        return apology("username already in use, try another.")
+    else:
+        db.execute("UPDATE users SET username = :username WHERE id == :id",
+                    username=username,
+                    id=user_id)
+        flash("Success! Username changed!")
+        return redirect("/")
