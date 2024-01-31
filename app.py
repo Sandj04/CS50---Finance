@@ -78,7 +78,6 @@ def index():
             profitability = round(((stock_current["price"] / stock["price"]) * 100) - 100, 2)
             stock["profitability"] = f"+{profitability}" if profitability > 0 else str(profitability)
             current_total += stock["total_price"]
-        print(portfolio)
         return render_template("index.html", portfolio=portfolio, user_cash=cash, current_total=current_total)
     else:
         return apology("Something went wrong", 500)
@@ -122,7 +121,7 @@ def buy():
                             price=price_share)
 
                 db.execute("UPDATE users SET cash = :cash WHERE id == :id", cash=balance_new, id=f'{user_id}')
-                flash("Submitted your child\'s college fund")
+                flash(f"Successfully bought {shares} share's of {symbol}!")
                 return render_template("buy.html")
     else:
         return render_template("buy.html")
@@ -133,7 +132,6 @@ def buy():
 def history():
     """Show history of transactions"""
     user_transactions = db.execute("SELECT user_id, symbol, shares, price, time FROM trades WHERE user_id = ? ORDER BY time", session["user_id"])
-    print(user_transactions)
 
     return render_template("history.html", user_transactions=user_transactions)
 
@@ -301,7 +299,6 @@ def delete():
 def deposit():
     user_id = session["user_id"]
     deposit = request.form.get("deposit")
-    print(deposit)
     if deposit.isnumeric():
         deposit = int(deposit)
     else:
@@ -309,7 +306,7 @@ def deposit():
     db.execute("UPDATE users SET cash = cash + :deposit WHERE id == :id",
                 deposit=deposit,
                 id=user_id)
-    flash("Success! Stop draining your retirement fund!")
+    flash(f"Successfully deposited {usd(deposit)}!")
     return redirect("/")
 
 @app.route("/withdraw", methods=["POST"])
