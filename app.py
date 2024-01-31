@@ -83,10 +83,15 @@ def index():
         return apology("Something went wrong", 500)
 
 
-@app.route("/account")
+@app.route("/settings")
 @login_required
-def account():
-    return render_template("account.html")
+def settings():
+    return render_template("settings.html")
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    return render_template("dashboard.html")
 
 @app.route("/buy", methods=["GET", "POST"]) #TODO ADD COMMENTS, FIX MULTIPLE OF SAME STOCK IF SOLD TO 0
 @login_required

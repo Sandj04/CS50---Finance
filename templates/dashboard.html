@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Dashboard
+{% endblock %}
+
+{% block main %}
+    <h1>Account Dashboard</h1>
+    <div>
+        <p class="fs-4">Username: <i>{{ user }}</i></p>
+        <p class="fs-4">Balance: <i>{{ cash | usd }}</i></p>
+    </div>
+{% endblock %}
